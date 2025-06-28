@@ -1,6 +1,6 @@
 # 🎙️ Python Voice Assistant
 
-A fully offline, voice-activated assistant built with Python. It uses Vosk for speech recognition and pyttsx3 for text-to-speech, enabling you to open apps, type text, take screenshots, and more — all hands-free.
+A fully offline, voice-activated assistant ```built with Python```. It uses ```Vosk for speech recognition and pyttsx3 for text-to-speech```, enabling you to open apps, type text, take screenshots, and more — all hands-free.
 
 ---
 
@@ -27,18 +27,28 @@ This voice assistant:
 - 📷 Take screenshots
 - 🔠 Type dictated text
 
-## ⚙️ Setup Instructions
+## 🧰 Prerequisites
+Before running this project, make sure you have:
 
-1- pip install -r requirements.txt
+Python 3.8 or higher installed on your system
+You can download it from [python.org](https://www.python.org/downloads/)
+
+To verify Python is installed, run in your terminal or command prompt: ``` python --version```
+
+## ⚙️ Setup Instructions
+1- Open the cmd or the terminal in the project directory and paste this command: pip install -r requirements.txt
 
 2-  Download Vosk model (No need it is uploaded within the repo)
 
 Download the English model from:
 https://alphacephei.com/vosk/models
 
-3- Run the assistant
-python main.py
+we are using a light weight variant of the vosk model: "vosk-model-small-en-us-0.15"
 
+3- You are all set , Run the assistant !
+either by pasting this command in the terminal: python main.py
+or
+double clicking the main.py file
 
 ## 🗣️ Supported Voice Commands
 
@@ -71,6 +81,8 @@ pyperclip
 Pillow
 
 webbrowser (built-in)
+
+os (built-in)
 
 Use pip install -r requirements.txt to install them all.
 
