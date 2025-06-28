@@ -8,6 +8,7 @@ import pyperclip
 from time import sleep
 from PIL import Image
 import webbrowser
+import os
 
 
 class TextToSpeech():
@@ -103,49 +104,56 @@ class CommandProcessor():
     def __init__(self,cp_tts_object,cp_speech_rec_obj):
         self.tts=cp_tts_object
         self.recognizer=cp_speech_rec_obj
+        self.commands = {
+            "exit"  : self._exit,
+            "exit program"  : self._exit,
+            "bye"  : self._exit,
+            "close program"  : self._exit,
+            "hello"  : self._welcome,
+            "hi"  : self._welcome,
+            "hey"  : self._welcome,
+            "welcome"  : self._welcome,
+            "goodmorning"  : self._welcome,
+            "open notepad"  : self._open_notepad,
+            "take screenshot"  : self._take_screenshot,
+            "take a screenshot"  : self._take_screenshot,
+            "open calculator"  : self._open_calculator,
+            "show image"  : self._show_image,
+            "copy this text"  : self._copy_text,
+            "paste clipboard"  : self._paste_text,
+            "paste text"  : self._paste_text,
+            "close window"  : self._close_window,
+            "minimize all windows"  : self._minimize_all,
+            "maximize window"  : self._maximize_window,
+            "switch window"  : self._switch_window,
+            "open web browser"  : self._open_web_browser,
+            "read clipboard"  : self._read_clipboard
+        }
+
+        self.pattern_commands=[cls() for cls in (PatternCommand.__subclasses__())]
+
 
     def handle_command(self, text):
-        if text in ['exit', 'exit program', 'bye', 'close program']:
-            self._exit()
-            return "exit"
-        elif text in ['hello', 'hi', 'hey', 'welcome','goodmorning']:
-            self._welcome()
-        elif text == "open notepad":
-            self._open_notepad()
-        elif text == "take screenshot" or (text == "take a screenshot"):
-            self._take_screenshot()
-        elif text == 'open calculator':
-            self._open_calculator()
-        elif text == 'show image':
-            self._show_image()
-        elif text == 'copy this text':
-            self._copy_text()
-        elif text == 'paste clipboard':
-            self._paste_text()
-        elif text == 'close window':
-            self._close_window()
-        elif "type" in text:
-            self._type(text)
-        elif text == 'minimize all windows':
-            self._minimize_all()
-        elif text == 'maximize window':
-            self._maximize_window()
-        elif text == 'switch window':
-            self._switch_window()
-        elif text == 'open web browser':
-            self._open_web_browser()
-        elif "search for" in text:
-            self._search(text)
-        elif text == 'read clipboard':
-            self._read_clipboard()
-        else:
-            self._unkown_command()
+        # First, check fixed command mappings
+        if text in self.commands:
+            self.commands[text]()
+            if text in ['exit', 'exit program', 'bye', 'close program']:
+                return "exit"
+            return
+        # Next, check dynamic pattern commands
+        for command in self.pattern_commands:
+            if command.match(text):
+                command.execute(text,self.tts) 
+                return
+            
+        # If no match found            
+        self._unknown_command()
 
     def _welcome(self):
         self.tts.speak("Welcome, How can I help you today ?")
 
-    def _unkown_command(self):
-        self.tts.speak("Sorry, I Can't recognize this command can you try again ?")
+    def _unknown_command(self):
+        self.tts.speak("Sorry, I Can't recognize this command. Can you try again ?")
 
     def _open_notepad(self):
         self.tts.speak("Opening notepad")
@@ -198,14 +206,6 @@ class CommandProcessor():
                 self.tts.speak("Please say yes or no.")
     def _exit(self):
         self.tts.speak("Exiting program, Bye.....")
-    def _type(self,text):
-        new_sentence = text.partition("type")[2].strip()
-        if new_sentence:
-            self.tts.speak(f"typing {new_sentence} ...")
-            pyperclip.copy(f"{new_sentence}")
-            pyautogui.hotkey('ctrl','v')
-        else:
-            self.tts.speak(f"Please say something to type!")
     def _minimize_all(self):
         self.tts.speak("minimizing window...")
         pyautogui.hotkey('win','d')        
@@ -218,14 +218,56 @@ class CommandProcessor():
     def _open_web_browser(self):
         self.tts.speak("Opening browser...")
         webbrowser.open("https://www.google.com")   
-    def _search(self,text):
+
+class PatternCommand:
+    """Base Class that every dynamic command will inherit from."""
+
+    def match(self,text):
+        """Returns True if this command should handle the text."""
+        raise NotImplementedError()
+    
+    def execute(self,text,tts):
+        """Excutes the command logic."""
+        raise NotImplementedError()
+    
+class TypeCommand(PatternCommand):
+    def match(self,text):
+        return text.lower().strip().startswith("type")
+
+    def execute(self,text,tts):
+        new_sentence = text.partition("type")[2].strip()
+        if new_sentence:
+            tts.speak(f"typing {new_sentence} ...")
+            pyperclip.copy(f"{new_sentence}")
+            pyautogui.hotkey('ctrl','v')
+        else:
+            tts.speak(f"Please say something to type!")
+    
+class SearchForCommand(PatternCommand):
+    def match(self,text):
+        return text.lower().strip().startswith("search for")
+
+    def execute(self,text,tts):
         new_sentence = text.partition("search for")[2].strip()
-        self.tts.speak(f"Searching for {new_sentence} ...")
-        pyperclip.copy(f"{new_sentence}")
-        webbrowser.open("https://www.google.com")
-        sleep(1)
-        pyautogui.hotkey('ctrl','v')
-        pyautogui.press('Enter')  
+        if new_sentence:
+            tts.speak(f"searching for {new_sentence} ...")
+            pyperclip.copy(f"{new_sentence}")
+            webbrowser.open("https://www.google.com")
+            sleep(1)
+            pyautogui.hotkey('ctrl','v')
+            pyautogui.press('Enter')  
+        else:
+            tts.speak(f"Please say something to search for!")
+    
+class SearchForCommand(PatternCommand):
+    def match(self,text):
+        return text.lower().strip().startswith("open youtube") or (text.lower().strip().startswith("open you tube"))
+
+    def execute(self,text,tts):
+        tts.speak(f"openning YouTube ...")
+        webbrowser.open("https://www.youtube.com/")
+
+
 
 class VoiceAssistant():
     """
@@ -243,11 +285,14 @@ class VoiceAssistant():
     - Instantiate the class and call the run() method to start the assistant loop.
     """
     def __init__(self):
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        model_path = os.path.join(BASE_DIR, "vosk-model-small-en-us-0.15")
         self.tts= TextToSpeech(cp_rate=130, cp_voice_index=0)
-        self.recognizer=SpeechRecognizer(cp_model_path="vosk-model-small-en-us-0.15",cp_sample_rate=16000,cp_device=None)
+        self.recognizer=SpeechRecognizer(cp_model_path=model_path,cp_sample_rate=16000,cp_device=None)
         self.commandProcessor=CommandProcessor(self.tts,self.recognizer)
 
     def run(self):
+        self.tts.speak("Voice Assistant is now running. Please say a command.")
         while True:
             text = self.recognizer.listen_for_command()
             result=self.commandProcessor.handle_command(text)
