@@ -9,6 +9,8 @@ from time import sleep
 from PIL import Image
 import webbrowser
 import os
+from abc import ABC, abstractmethod
+from typing import Optional
 
 
 class TextToSpeech():
@@ -104,137 +106,46 @@ class CommandProcessor():
     def __init__(self,cp_tts_object,cp_speech_rec_obj):
         self.tts=cp_tts_object
         self.recognizer=cp_speech_rec_obj
-        self.commands = {
-            "exit"  : self._exit,
-            "exit program"  : self._exit,
-            "bye"  : self._exit,
-            "close program"  : self._exit,
-            "hello"  : self._welcome,
-            "hi"  : self._welcome,
-            "hey"  : self._welcome,
-            "welcome"  : self._welcome,
-            "goodmorning"  : self._welcome,
-            "open notepad"  : self._open_notepad,
-            "take screenshot"  : self._take_screenshot,
-            "take a screenshot"  : self._take_screenshot,
-            "open calculator"  : self._open_calculator,
-            "show image"  : self._show_image,
-            "copy this text"  : self._copy_text,
-            "paste clipboard"  : self._paste_text,
-            "paste text"  : self._paste_text,
-            "close window"  : self._close_window,
-            "minimize all windows"  : self._minimize_all,
-            "maximize window"  : self._maximize_window,
-            "switch window"  : self._switch_window,
-            "open web browser"  : self._open_web_browser,
-            "read clipboard"  : self._read_clipboard
-        }
 
-        self.pattern_commands=[cls() for cls in (PatternCommand.__subclasses__())]
+        self.pattern_commands=[cls() for cls in (VoiceCommand.__subclasses__())]
 
 
     def handle_command(self, text):
-        # First, check fixed command mappings
-        if text in self.commands:
-            self.commands[text]()
-            if text in ['exit', 'exit program', 'bye', 'close program']:
-                return "exit"
-            return
+        # # First, check fixed command mappings
+        # if text in self.commands:
+        #     self.commands[text]()
+        #     if text in ['exit', 'exit program', 'bye', 'close program']:
+        #         return "exit"
+        #     return
         # Next, check dynamic pattern commands
         for command in self.pattern_commands:
             if command.match(text):
-                command.execute(text,self.tts) 
+                result = command.execute(text,self.tts,self.recognizer) 
+                if result == "exit":
+                    return "exit"
                 return
             
-        # If no match found            
-        self._unknown_command()
+        # # If no match found            
+        # self._unknown_command()
 
-    def _welcome(self):
-        self.tts.speak("Welcome, How can I help you today ?")
 
-    def _unknown_command(self):
-        self.tts.speak("Sorry, I Can't recognize this command. Can you try again ?")
-
-    def _open_notepad(self):
-        self.tts.speak("Opening notepad")
-        pyperclip.copy("notepad")
-        pyautogui.hotkey('win','r')
-        pyautogui.hotkey('ctrl','v')
-        pyautogui.press('Enter')
-        sleep(1)
-        pyautogui.hotkey('ctrl','n')
-
-    def _take_screenshot(self):
-        self.tts.speak("Taking a screenshot...")
-        screenshot=pyautogui.screenshot()
-        screenshot.save('screenshot.png')
-    def _open_calculator(self):
-        self.tts.speak("Opening calculator...")
-        pyperclip.copy("calc")
-        pyautogui.hotkey('win','r')
-        pyautogui.hotkey('ctrl','v')
-        pyautogui.press('Enter')
-    def _show_image(self):
-        self.tts.speak("Showing Image...")
-        # Open the image
-        img = Image.open("image.jpg")
-        # Display the image
-        img.show()
-    def _copy_text(self):
-        self.tts.speak("Copying the predefined text...")
-        pyperclip.copy("This text was predefined by python voice assitant program")
-    def _paste_text(self):
-        self.tts.speak("pasting from the clipboard...")
-        pyautogui.hotkey('ctrl','v')
-    def _read_clipboard(self):
-        clipboard_content=pyperclip.paste()
-        self.tts.speak("Reading from the clipboard...")
-        self.tts.speak(f"The text at the clipboard is: {clipboard_content}")
-
-    def _close_window(self):
-        self.tts.speak("Are you sure you want to exit the active window? Please say yes or no.")
-        while True:
-            confirmation = self.recognizer.listen_for_command()
-            if 'yes' in confirmation:
-                self.tts.speak("Closing the active window...")
-                pyautogui.hotkey('alt', 'f4')
-                break
-            elif 'no' in confirmation:
-                self.tts.speak("Aborting closure...")
-                break
-            elif confirmation:
-                self.tts.speak("Please say yes or no.")
-    def _exit(self):
-        self.tts.speak("Exiting program, Bye.....")
-    def _minimize_all(self):
-        self.tts.speak("minimizing window...")
-        pyautogui.hotkey('win','d')        
-    def _maximize_window(self):
-        self.tts.speak("maximizing window...")
-        pyautogui.hotkey('win','up')        
-    def _switch_window(self):
-        self.tts.speak("Switching window...")
-        pyautogui.hotkey('alt','tab')    
-    def _open_web_browser(self):
-        self.tts.speak("Opening browser...")
-        webbrowser.open("https://www.google.com")   
-
-class PatternCommand:
+class VoiceCommand(ABC):
     """Base Class that every dynamic command will inherit from."""
-
-    def match(self,text):
+    @abstractmethod
+    def match(self, text: str) -> bool:
         """Returns True if this command should handle the text."""
-        raise NotImplementedError()
+        pass
     
-    def execute(self,text,tts):
+    @abstractmethod
+    def execute(self, text: str, tts: TextToSpeech, recognizer: SpeechRecognizer) ->str:
         """Excutes the command logic."""
-        raise NotImplementedError()
+        pass
     
-class TypeCommand(PatternCommand):
-    def match(self,text):
+class TypeCommand(VoiceCommand):
+    def match(self,text) -> bool:
         return text.lower().strip().startswith("type")
 
-    def execute(self,text,tts):
+    def execute(self, text: str, tts: TextToSpeech, recognizer: SpeechRecognizer) ->str:
         new_sentence = text.partition("type")[2].strip()
         if new_sentence:
             tts.speak(f"typing {new_sentence} ...")
@@ -242,12 +153,14 @@ class TypeCommand(PatternCommand):
             pyautogui.hotkey('ctrl','v')
         else:
             tts.speak(f"Please say something to type!")
+
+        return "OK"
     
-class SearchForCommand(PatternCommand):
-    def match(self,text):
+class SearchForCommand(VoiceCommand):
+    def match(self,text) -> bool:
         return text.lower().strip().startswith("search for")
 
-    def execute(self,text,tts):
+    def execute(self, text: str, tts: TextToSpeech, recognizer: SpeechRecognizer) ->str:
         new_sentence = text.partition("search for")[2].strip()
         if new_sentence:
             tts.speak(f"searching for {new_sentence} ...")
@@ -258,17 +171,233 @@ class SearchForCommand(PatternCommand):
             pyautogui.press('Enter')  
         else:
             tts.speak(f"Please say something to search for!")
+
+        return "OK"
+
     
-class SearchForCommand(PatternCommand):
-    def match(self,text):
+class OpenYoutubeCommand(VoiceCommand):
+    def match(self,text) -> bool:
+
         return text.lower().strip().startswith("open youtube") or (text.lower().strip().startswith("open you tube"))
 
-    def execute(self,text,tts):
+    def execute(self, text: str, tts: TextToSpeech, recognizer: SpeechRecognizer) ->str:
         tts.speak(f"openning YouTube ...")
         webbrowser.open("https://www.youtube.com/")
+        return "OK"
+        
+class WelcomeCommand(VoiceCommand):
+    def match(self,text) -> bool:
+        return text.strip().lower() in ("hi" , "hey" , "hello" , "welcome" , "good morning")
 
+    def execute(self, text: str, tts: TextToSpeech, recognizer: SpeechRecognizer) ->str:
+        tts.speak("Welcome, How can I help you today ?")
+        return "OK"
+        
+class ExitCommand(VoiceCommand):
+    def match(self,text) -> bool:
+        return text.strip().lower() in ("exit" , "exit program" , "bye" , "close program")
 
+    def execute(self, text: str, tts: TextToSpeech, recognizer: SpeechRecognizer) ->str:
+        tts.speak("Exiting program, Bye.....")
+        return "exit"
 
+class OpenNotepadCommand(VoiceCommand):
+    def match(self,text) -> bool:
+        retval = False
+        if text == "open notepad":
+            retval = True
+        return retval
+
+    def execute(self, text: str, tts: TextToSpeech, recognizer: SpeechRecognizer) ->str:
+        tts.speak("Opening notepad")
+        pyperclip.copy("notepad")
+        pyautogui.hotkey('win','r')
+        pyautogui.hotkey('ctrl','v')
+        pyautogui.press('Enter')
+        sleep(1)
+        pyautogui.hotkey('ctrl','n')
+        
+        return "OK"
+
+class TakeScreenshotCommand(VoiceCommand):
+    def match(self,text) -> bool:
+        return text.strip().lower() in ("take screenshot", "take a screenshot")
+
+    def execute(self, text: str, tts: TextToSpeech, recognizer: SpeechRecognizer) ->str:
+        tts.speak("Taking a screenshot...")
+        screenshot=pyautogui.screenshot()
+        screenshot.save('screenshot.png')
+        
+        return "OK"
+
+class OpenCalculatorCommand(VoiceCommand):
+    def match(self,text) -> bool:
+        retval = False
+        if (text.lower() == "open calculator"):
+            retval = True
+        return retval
+
+    def execute(self, text: str, tts: TextToSpeech, recognizer: SpeechRecognizer) ->str:
+        tts.speak("Opening calculator...")
+        pyperclip.copy("calc")
+        pyautogui.hotkey('win','r')
+        pyautogui.hotkey('ctrl','v')
+        pyautogui.press('Enter')
+        
+        return "OK"
+
+class ShowImageCommand(VoiceCommand):
+    def match(self,text) -> bool:
+        retval = False
+        if (text.lower() == "show image"):
+            retval = True
+        return retval
+
+    def execute(self, text: str, tts: TextToSpeech, recognizer: SpeechRecognizer) ->str:
+        tts.speak("Showing Image...")
+        image_path = "image.jpg"
+        if not os.path.exists(image_path):
+            msg = f"Image file {image_path} not found."
+            print(msg)
+            tts.speak(msg)
+            return
+        try:
+            img = Image.open(image_path)
+            img.show()
+        except Exception as e:
+            print(f"Showing image failed with error: {e}")
+            tts.speak(f"Showing image failed with error: {e}")
+        
+        return "OK"
+
+class CopyCommand(VoiceCommand):
+    def match(self,text) -> bool:
+        retval = False
+        if (text.lower() == "copy text"):
+            retval = True
+        return retval
+
+    def execute(self, text: str, tts: TextToSpeech, recognizer: SpeechRecognizer) ->str:
+        tts.speak("Copying the predefined text...")
+        pyperclip.copy("This text was predefined by python voice assitant program")
+        
+        return "OK"
+
+class PasteCommand(VoiceCommand):
+    def match(self,text) -> bool:
+        retval = False
+        if (text.lower() == "paste clipboard"):
+            retval = True
+        return retval
+
+    def execute(self, text: str, tts: TextToSpeech, recognizer: SpeechRecognizer) ->str:
+        self.tts.speak("pasting from the clipboard...")
+        pyautogui.hotkey('ctrl','v')
+        
+        return "OK"
+
+class ReadClipboardCommand(VoiceCommand):
+    def match(self,text) -> bool:
+        retval = False
+        if (text.lower() == "read clipboard"):
+            retval = True
+        return retval
+
+    def execute(self, text: str, tts: TextToSpeech, recognizer: SpeechRecognizer) ->str:
+        clipboard_content=pyperclip.paste()
+        tts.speak("Reading from the clipboard...")
+        tts.speak(f"The text at the clipboard is: {clipboard_content}")
+        
+        return "OK"
+
+class CloseWindowCommand(VoiceCommand):
+    def match(self,text) -> bool:
+        retval = False
+        if (text.lower() == "close window"):
+            retval = True
+        return retval
+
+    def execute(self, text: str, tts: TextToSpeech, recognizer: SpeechRecognizer) ->str:
+        tts.speak("Are you sure you want to exit the active window? Please say yes or no.")
+        while True:
+            confirmation = recognizer.listen_for_command()
+            if 'yes' in confirmation:
+                tts.speak("Closing the active window...")
+                pyautogui.hotkey('alt', 'f4')
+                break
+            elif 'no' in confirmation:
+                tts.speak("Aborting closure...")
+                break
+            elif confirmation:
+                tts.speak("Please say yes or no.")
+        
+        return "OK"
+
+class MinimizeAllCommand(VoiceCommand):
+    def match(self,text) -> bool:
+        retval = False
+        if (text.lower() == "minimize all windows"):
+            retval = True
+        return retval
+
+    def execute(self, text: str, tts: TextToSpeech, recognizer: SpeechRecognizer) ->str:
+        tts.speak("minimizing window...")
+        pyautogui.hotkey('win','d')   
+        
+        return "OK"
+
+class MaxmizeWindowCommand(VoiceCommand):
+    def match(self,text) -> bool:
+        retval = False
+        if (text.lower() == "maximize window"):
+            retval = True
+        return retval
+
+    def execute(self, text: str, tts: TextToSpeech, recognizer: SpeechRecognizer) ->str:
+        tts.speak("maximizing window...")
+        pyautogui.hotkey('win','up')    
+        
+        return "OK"
+
+class SwitchWindowCommand(VoiceCommand):
+    def match(self,text) -> bool:
+        retval = False
+        if (text.lower() == "switch window"):
+            retval = True
+        return retval
+
+    def execute(self, text: str, tts: TextToSpeech, recognizer: SpeechRecognizer) ->str:
+        tts.speak("Switching window...")
+        pyautogui.hotkey('alt','tab')    
+        
+        return "OK"
+
+class OpenBrowserCommand(VoiceCommand):
+    def match(self,text) -> bool:
+        retval = False
+        if (text.lower() == "open browser"):
+            retval = True
+        return retval
+
+    def execute(self, text: str, tts: TextToSpeech, recognizer: SpeechRecognizer) ->str:
+        tts.speak("Opening browser...")
+        webbrowser.open("https://www.google.com")  
+        
+        return "OK"
+
+class UnkownCommand(VoiceCommand):
+    """
+    This class will always match if no other classes are matched.
+    ***    This IS MANDATED TO BE LAST CLASS TO ENHIRIT FROM THE VOICE COMMAND CLASS   ***
+    """
+    
+    def match(self,text) -> bool:
+        return True
+
+    def execute(self, text: str, tts: TextToSpeech, recognizer: SpeechRecognizer) ->str:
+        tts.speak("Sorry, I Can't recognize this command. Can you try again ?")
+        return "OK"
+    
 class VoiceAssistant():
     """
     VoiceAssistant is the main controller class that integrates speech recognition,
