@@ -107,7 +107,7 @@ class CommandProcessor():
         self.tts=cp_tts_object
         self.recognizer=cp_speech_rec_obj
 
-        self.pattern_commands=[cls() for cls in (VoiceCommand.__subclasses__())]
+        self.pattern_commands= CommandRegistry.get_registry() #UnknownCommand is Last because it is a "Fallback Mechanism" 
 
 
     def handle_command(self, text):
@@ -128,6 +128,17 @@ class CommandProcessor():
         # # If no match found            
         # self._unknown_command()
 
+class CommandRegistry():
+    _registry=[]
+
+    @staticmethod
+    def register(cls):
+        CommandRegistry._registry.append(cls)
+        return cls
+
+    @staticmethod
+    def get_registry():
+        return [cls() for cls in (CommandRegistry._registry)] + [UnknownCommand()]
 
 class VoiceCommand(ABC):
     """Base Class that every dynamic command will inherit from."""
@@ -140,7 +151,7 @@ class VoiceCommand(ABC):
     def execute(self, text: str, tts: TextToSpeech, recognizer: SpeechRecognizer) ->str:
         """Excutes the command logic."""
         pass
-    
+@CommandRegistry.register    
 class TypeCommand(VoiceCommand):
     def match(self,text) -> bool:
         return text.lower().strip().startswith("type")
@@ -156,6 +167,7 @@ class TypeCommand(VoiceCommand):
 
         return "OK"
     
+@CommandRegistry.register    
 class SearchForCommand(VoiceCommand):
     def match(self,text) -> bool:
         return text.lower().strip().startswith("search for")
@@ -175,6 +187,7 @@ class SearchForCommand(VoiceCommand):
         return "OK"
 
     
+@CommandRegistry.register    
 class OpenYoutubeCommand(VoiceCommand):
     def match(self,text) -> bool:
 
@@ -185,6 +198,7 @@ class OpenYoutubeCommand(VoiceCommand):
         webbrowser.open("https://www.youtube.com/")
         return "OK"
         
+@CommandRegistry.register    
 class WelcomeCommand(VoiceCommand):
     def match(self,text) -> bool:
         return text.strip().lower() in ("hi" , "hey" , "hello" , "welcome" , "good morning")
@@ -193,6 +207,7 @@ class WelcomeCommand(VoiceCommand):
         tts.speak("Welcome, How can I help you today ?")
         return "OK"
         
+@CommandRegistry.register    
 class ExitCommand(VoiceCommand):
     def match(self,text) -> bool:
         return text.strip().lower() in ("exit" , "exit program" , "bye" , "close program")
@@ -200,7 +215,7 @@ class ExitCommand(VoiceCommand):
     def execute(self, text: str, tts: TextToSpeech, recognizer: SpeechRecognizer) ->str:
         tts.speak("Exiting program, Bye.....")
         return "exit"
-
+@CommandRegistry.register
 class OpenNotepadCommand(VoiceCommand):
     def match(self,text) -> bool:
         retval = False
@@ -218,7 +233,7 @@ class OpenNotepadCommand(VoiceCommand):
         pyautogui.hotkey('ctrl','n')
         
         return "OK"
-
+@CommandRegistry.register
 class TakeScreenshotCommand(VoiceCommand):
     def match(self,text) -> bool:
         return text.strip().lower() in ("take screenshot", "take a screenshot")
@@ -229,7 +244,8 @@ class TakeScreenshotCommand(VoiceCommand):
         screenshot.save('screenshot.png')
         
         return "OK"
-
+    
+@CommandRegistry.register
 class OpenCalculatorCommand(VoiceCommand):
     def match(self,text) -> bool:
         retval = False
@@ -245,7 +261,7 @@ class OpenCalculatorCommand(VoiceCommand):
         pyautogui.press('Enter')
         
         return "OK"
-
+@CommandRegistry.register
 class ShowImageCommand(VoiceCommand):
     def match(self,text) -> bool:
         retval = False
@@ -269,7 +285,8 @@ class ShowImageCommand(VoiceCommand):
             tts.speak(f"Showing image failed with error: {e}")
         
         return "OK"
-
+    
+@CommandRegistry.register
 class CopyCommand(VoiceCommand):
     def match(self,text) -> bool:
         retval = False
@@ -282,7 +299,8 @@ class CopyCommand(VoiceCommand):
         pyperclip.copy("This text was predefined by python voice assitant program")
         
         return "OK"
-
+    
+@CommandRegistry.register
 class PasteCommand(VoiceCommand):
     def match(self,text) -> bool:
         retval = False
@@ -291,11 +309,12 @@ class PasteCommand(VoiceCommand):
         return retval
 
     def execute(self, text: str, tts: TextToSpeech, recognizer: SpeechRecognizer) ->str:
-        self.tts.speak("pasting from the clipboard...")
+        tts.speak("pasting from the clipboard...")
         pyautogui.hotkey('ctrl','v')
         
         return "OK"
-
+    
+@CommandRegistry.register
 class ReadClipboardCommand(VoiceCommand):
     def match(self,text) -> bool:
         retval = False
@@ -309,7 +328,8 @@ class ReadClipboardCommand(VoiceCommand):
         tts.speak(f"The text at the clipboard is: {clipboard_content}")
         
         return "OK"
-
+    
+@CommandRegistry.register
 class CloseWindowCommand(VoiceCommand):
     def match(self,text) -> bool:
         retval = False
@@ -332,7 +352,8 @@ class CloseWindowCommand(VoiceCommand):
                 tts.speak("Please say yes or no.")
         
         return "OK"
-
+    
+@CommandRegistry.register
 class MinimizeAllCommand(VoiceCommand):
     def match(self,text) -> bool:
         retval = False
@@ -345,8 +366,9 @@ class MinimizeAllCommand(VoiceCommand):
         pyautogui.hotkey('win','d')   
         
         return "OK"
-
-class MaxmizeWindowCommand(VoiceCommand):
+    
+@CommandRegistry.register
+class MaximizeWindowCommand(VoiceCommand):
     def match(self,text) -> bool:
         retval = False
         if (text.lower() == "maximize window"):
@@ -358,7 +380,8 @@ class MaxmizeWindowCommand(VoiceCommand):
         pyautogui.hotkey('win','up')    
         
         return "OK"
-
+    
+@CommandRegistry.register
 class SwitchWindowCommand(VoiceCommand):
     def match(self,text) -> bool:
         retval = False
@@ -371,7 +394,8 @@ class SwitchWindowCommand(VoiceCommand):
         pyautogui.hotkey('alt','tab')    
         
         return "OK"
-
+    
+@CommandRegistry.register
 class OpenBrowserCommand(VoiceCommand):
     def match(self,text) -> bool:
         retval = False
@@ -384,11 +408,13 @@ class OpenBrowserCommand(VoiceCommand):
         webbrowser.open("https://www.google.com")  
         
         return "OK"
-
-class UnkownCommand(VoiceCommand):
+    
+# This class is not added to CommandRegistry as it should be fallback funcion and will be last in the _registry list, it will be appended manually
+class UnknownCommand(VoiceCommand):
     """
     This class will always match if no other classes are matched.
     ***    This IS MANDATED TO BE LAST CLASS TO ENHIRIT FROM THE VOICE COMMAND CLASS   ***
+    This handled through the CommandRegistry class
     """
     
     def match(self,text) -> bool:
