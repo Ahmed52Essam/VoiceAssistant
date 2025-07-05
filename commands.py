@@ -2,6 +2,7 @@ import pyperclip
 import pyautogui
 from time import sleep
 from PIL import Image
+import os
 import webbrowser
 
 from core.registry import CommandRegistry , VoiceCommand
