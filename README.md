@@ -50,20 +50,28 @@ either by pasting this command in the terminal: python main.py
 or
 double clicking the main.py file
 
+
 ## 🗣️ Supported Voice Commands
 
-| Command            | Action                           |
-| ------------------ | -------------------------------- |
-| "open notepad"     | Launches Notepad                 |
-| "open calculator"  | Launches Calculator              |
-| "take screenshot"  | Saves a screenshot to file       |
-| "show image"       | Opens `image.jpg`                |
-| "copy this text"   | Copies predefined text           |
-| "paste clipboard"  | Pastes clipboard content         |
-| "type hello world" | Types "hello world"              |
-| "search for cats"  | Opens browser, searches for cats |
-| "close window"     | Prompts to close active window   |
-| "exit"             | Gracefully exits the program     |
+| Command Example         | Action                                 |
+|------------------------|----------------------------------------|
+| "open notepad"         | Launches Notepad                       |
+| "open calculator"      | Launches Calculator                    |
+| "take screenshot"      | Saves a screenshot to file             |
+| "show image"           | Opens `image.jpg`                      |
+| "copy text"            | Copies predefined text                 |
+| "paste clipboard"      | Pastes clipboard content               |
+| "read clipboard"       | Reads clipboard content aloud          |
+| "type hello world"     | Types "hello world"                    |
+| "search for cats"      | Opens browser, searches for "cats"     |
+| "open youtube"         | Opens YouTube in browser               |
+| "open browser"         | Opens Google in browser                |
+| "minimize all windows" | Minimizes all windows                  |
+| "maximize window"      | Maximizes the current window           |
+| "switch window"        | Switches to the next window            |
+| "close window"         | Prompts to close active window         |
+| "hi"/"hello"/"welcome" | Greets you                             |
+| "exit"/"bye"           | Gracefully exits the program           |
 
 
 ## 📦 Dependencies
@@ -86,19 +94,50 @@ os (built-in)
 
 Use pip install -r requirements.txt to install them all.
 
+
 ## 📁 File Structure
 
-voice-assistant\
-│\
-├── main.py                         # Entry point   \
-├── vosk-model-small-en-us-0.15/    # Speech recognition model  \
-├── image.jpg                       # Used in "show image"  \
-├── requirements.txt                # Dependencies  \
-├── README.md                       # You are here
+voice-assistant/\
+│
+├── main.py                         # Entry point\
+├── commands.py                     # All command classes\
+├── requirements.txt                # Dependencies\
+├── README.md                       # You are here\
+├── image.jpg                       # Used in "show image"\
+├── vosk-model-small-en-us-0.15/    # Speech recognition model\
+├── core/\
+│   ├── __init__.py\
+│   ├── text_to_speech.py           # Text-to-speech logic\
+│   ├── recognizer.py               # Speech recognition logic\
+│   ├── processor.py                # Command processing logic\
+│   └── registry.py                 # Command registry & base class\
+└── tests/                          # Unit tests
 
+
+## 🧪 Running the Tests
+
+To run all unit tests, use the following command from your project root:
+
+```sh
+python -m unittest discover -s tests
+```
+Or -v (verbose)flag to prints the names of failed test cases,
+```sh
+python -m unittest discover -s tests -v
+```
+
+Or, to run a specific test file:
+
+```sh
+python -m unittest tests/test_typecommands.py
+```
+
+All tests are located in the `tests/` directory and follow the `test_*.py` naming convention.
+
+---
 
 ## 👤 Author
 Created by Ahmed Essam Sayed    \
 ahmed52essam@gmail.com
 
-Feel free to contact me for support or in case needed Access to GitHub Repository
+Feel free to contact me for support.
